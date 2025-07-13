@@ -1,187 +1,98 @@
-================================================================================
-M.A.N.T.R.A. - Market Analysis Neural Trading Research Assistant
-================================================================================
-FINAL PROJECT STRUCTURE - VERSION 1.0.0
-Philosophy: "All signal, no noise. Decisions, not guesses."
-================================================================================
+M.A.N.T.R.A. — FINAL PROJECT STRUCTURE (Locked v1.0, No Upgrades)
+=================================================================
 
-/mantra/
-│
-├── streamlit_dashboard.py     # Main Streamlit application (entry point)
-├── data_loader.py             # Data loading from Google Sheets
-├── signal_engine.py           # Signal calculation and scoring
-├── ui_components.py           # UI components and styling
-├── constants.py               # Configuration and settings
-└── requirements.txt           # Python dependencies
+This is the FINAL, production-grade directory and data flow for the M.A.N.T.R.A. Personal Indian Stock Intelligence System.
+This structure is designed to remain robust, understandable, and maintainable for many years—no upgrades or new files will ever be needed.
 
-================================================================================
-FILE DESCRIPTIONS
-================================================================================
+--------------------------------------------------------------------------------
+Root Directory Structure
+--------------------------------------------------------------------------------
+app.py
+    # Streamlit dashboard — the only UI file. 
+    # Renders metrics, filters, tables, cards, export, and all visuals.
+    # Reads everything from config and data—never hardcoded logic.
 
-1. requirements.txt [5 lines]
-   - streamlit==1.32.0
-   - pandas==2.2.0
-   - plotly==5.19.0
-   - numpy==1.26.3
-   - psutil==5.9.8
+constants.py
+    # All configuration, column names, factor functions, scoring logic,
+    # factor weights, regimes, UI colors, and documentation strings.
+    # Change here, and it updates everywhere—no code changes elsewhere.
 
-2. constants.py [~400 lines]
-   - Google Sheets configuration (ID, GIDs)
-   - Signal thresholds (BUY: 75, WATCH: 60, etc.)
-   - Factor weights (momentum: 30%, value: 25%, etc.)
-   - All thresholds and ranges
-   - UI colors and settings
-   - Data quality parameters
+core_system_foundation.py
+    # The heart of all data I/O, cleaning, validation, schema checking,
+    # feature engineering, memory optimization, caching, and health/quality checks.
+    # Handles all loading from Google Sheets, full data pipeline, and ETL.
 
-3. data_loader.py [~300 lines]
-   - DataLoader class
-   - load_all_data() - Loads 3 sheets (watchlist, returns, sector)
-   - Fast cleaning methods for each sheet type
-   - Market cap parsing (Cr/Lakh)
-   - Data validation
-   - Calculated fields (position_52w, etc.)
+data_loader.py
+    # Thin adapter: calls core_system_foundation.py's load_and_process()
+    # to produce the exact dataframes and status objects the dashboard expects.
+    # No logic—just a simple interface bridge for future-proofing.
 
-4. signal_engine.py [~500 lines]
-   - SignalEngine class
-   - calculate_all_signals() - Main scoring method
-   - Factor calculations:
-     * momentum_score (returns-based)
-     * value_score (PE, EPS)
-     * technical_score (SMAs, 52w position)
-     * volume_score (rvol, volume ratios)
-     * fundamental_score (quality metrics)
-   - Decision making (BUY/WATCH/AVOID)
-   - Risk assessment
-   - Target/stop loss calculation
+signal_engine.py
+    # Handles factor scoring, composite signals, risk banding, signal tagging,
+    # regime logic, and row-by-row explainability (reason column).
+    # 100% data/config driven—no hardcoded rules.
 
-5. ui_components.py [~400 lines]
-   - load_custom_css() - Dark theme styling
-   - metric_card() - KPI displays
-   - stock_card() - Stock information cards
-   - signal_badge() - Decision badges
-   - sector_heatmap() - Plotly heatmap
-   - Charts and visualizations
-   - Alert components
-   - Table styling
+requirements.txt
+    # Minimal, locked dependencies for Streamlit Cloud.
+    # Only: streamlit, pandas, numpy, plotly
 
-6. streamlit_dashboard.py [~300 lines]
-   - Main application logic
-   - Session state management
-   - Data loading orchestration
-   - Filter controls in sidebar
-   - Tab-based navigation:
-     * Overview (metrics, top picks)
-     * Signals (filtered table)
-     * Top Picks (categorized)
-     * Sectors (analysis)
-     * Analysis (distributions)
-   - Export functionality
+structure.txt
+    # This file: explains the locked project structure, logic flow, and module responsibilities.
+    # Should be kept up-to-date if any structural change is ever made (not expected).
 
-================================================================================
-DATA FLOW
-================================================================================
+--------------------------------------------------------------------------------
+Data Flow & Logic Path
+--------------------------------------------------------------------------------
+[Google Sheets: Watchlist, Returns, Sector] 
+        |
+        v
+core_system_foundation.py   (ETL, validation, feature engineering, quality)
+        |
+        v
+data_loader.py              (thin adapter: returns (stocks_df, sector_df, health))
+        |
+        v
+signal_engine.py            (multi-factor scoring, tag, reason, regime, risk)
+        |
+        v
+app.py                      (dashboard: UI, metrics, cards, table, filter, chart)
+        |
+        v
+requirements.txt            (for deployment — nothing extra)
+        |
+        v
+structure.txt               (for human/project reference)
 
-1. User opens app → streamlit_dashboard.py
-2. Load Google Sheets → data_loader.py
-   - Watchlist sheet (main stock data)
-   - Returns sheet (return averages)
-   - Sector sheet (sector performance)
-3. Calculate signals → signal_engine.py
-   - Multi-factor scoring
-   - Decision assignment
-   - Risk calculation
-4. Apply filters → streamlit_dashboard.py
-5. Display UI → ui_components.py
+--------------------------------------------------------------------------------
+Locked Design Philosophy
+--------------------------------------------------------------------------------
+- **No file uploads, no local data:** Always fetches latest Google Sheets.
+- **All business logic and scoring are config/data-driven:** Change `constants.py` or the sheets, never the app code.
+- **Single-point-in-time logic:** No historical memory; always operates on the freshest possible data snapshot.
+- **No feature creep, no TODOs, no hidden dependencies:** All files in use are listed here. If a file is not listed, it is not used.
+- **No `ui.py`, no "extras":** All UI lives in `app.py`, all data in Google Sheets, all logic in config and modules above.
 
-================================================================================
-KEY FEATURES
-================================================================================
+--------------------------------------------------------------------------------
+Sheet Names and Purpose
+--------------------------------------------------------------------------------
+- **Watchlist Sheet:**       Master universe — all stock-level attributes.
+- **Returns Sheet:**         Multi-horizon returns, averages — for momentum/factor analysis.
+- **Sector Sheet:**          Sector aggregates, rotation/momentum, heatmap.
 
-✓ Google Sheets Integration
-  - Direct CSV export URLs
-  - Handles Indian market data (₹, Cr, Lakh)
-  - Three coordinated sheets
+--------------------------------------------------------------------------------
+Key Maintenance Notes
+--------------------------------------------------------------------------------
+- **To change data or scoring:** Update the relevant Google Sheet or `constants.py`.
+- **To add a new factor or regime:** Update only `constants.py` (FACTOR_CONFIG) and/or your sheets.
+- **App and ETL code NEVER need to be updated for new columns or scoring logic.**
+- **If something breaks, check the health report/status from `core_system_foundation.py` pipeline.**
 
-✓ Signal Generation
-  - 5-factor scoring system
-  - Clear BUY/WATCH/AVOID decisions
-  - Risk assessment
-  - Target prices
+--------------------------------------------------------------------------------
+Version & Status
+--------------------------------------------------------------------------------
+- **This is the FINAL, locked, non-upgradeable version** for personal edge and clarity.
+- **Any future feature must be added via data or config, not code.**
+- **Version:** v1.0 (Locked, {year})
+--------------------------------------------------------------------------------
 
-✓ User Interface
-  - Professional dark theme
-  - Interactive filters
-  - Multiple views (tabs)
-  - Export to CSV
-
-✓ Performance
-  - Streamlit caching
-  - Optimized calculations
-  - Fast loading
-
-================================================================================
-DEPLOYMENT INSTRUCTIONS
-================================================================================
-
-1. Update GOOGLE_SHEET_ID in constants.py
-2. Ensure Google Sheets are publicly accessible
-3. Install dependencies: pip install -r requirements.txt
-4. Run locally: streamlit run streamlit_dashboard.py
-5. Deploy to Streamlit Cloud:
-   - Push to GitHub
-   - Connect on share.streamlit.io
-   - Deploy!
-
-================================================================================
-OPTIMIZATIONS FOR SPEED
-================================================================================
-
-- Parallel data loading (ThreadPoolExecutor)
-- Vectorized calculations (no loops)
-- Smart caching (@st.cache_data)
-- Pagination for large datasets
-- Simplified UI components
-- Minimal real-time calculations
-
-================================================================================
-DATA REQUIREMENTS
-================================================================================
-
-Watchlist Sheet Must Have:
-- ticker, company_name, price, sector
-- ret_1d, ret_7d, ret_30d (returns)
-- pe, eps_current, eps_change_pct
-- volume_1d, rvol
-- market_cap, category
-- sma_20d, sma_50d, sma_200d
-- low_52w, high_52w
-
-Sector Sheet Must Have:
-- sector
-- sector_ret_1d, sector_ret_7d, sector_ret_30d
-- sector_count
-
-================================================================================
-NOTES
-================================================================================
-
-- Built for Indian stock markets (NSE/BSE)
-- No external APIs required
-- No authentication needed
-- Works with public Google Sheets only
-- Optimized for Streamlit Community Cloud
-- Mobile responsive
-
-================================================================================
-VERSION HISTORY
-================================================================================
-
-v1.0.0 - Final Production Version
-- Complete feature set
-- Speed optimized
-- Bug-free and tested
-- Ready for deployment
-
-================================================================================
-END OF STRUCTURE
-================================================================================
+M.A.N.T.R.A. Motto: "Precision Over Noise. Decisions, Not Guesses. My Edge, My Logic, My Market."
