@@ -1,4 +1,4 @@
-"""
+    """
 constants.py - M.A.N.T.R.A. Central Configuration (Locked Version)
 ==================================================================
 Holds all configuration, scoring logic, thresholds, factor functions,
