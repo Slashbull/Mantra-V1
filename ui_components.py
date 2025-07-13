@@ -3,12 +3,6 @@ ui_components.py - M.A.N.T.R.A. UI Components (Final Version)
 ============================================================
 Beautiful, modern UI components for the M.A.N.T.R.A. dashboard.
 Optimized for both desktop and mobile viewing.
-
-Features:
-- Dark theme optimized for traders
-- Responsive design
-- Interactive charts and visualizations
-- Clean, professional styling
 """
 
 import streamlit as st
@@ -520,7 +514,6 @@ class UIComponents:
         </div>
         """, unsafe_allow_html=True)
 
-# Utility functions for quick UI elements
 def quick_metric(label: str, value: Any, delta: str = "") -> None:
     """Quick metric display"""
     UIComponents.metric_card(label, str(value), delta)
