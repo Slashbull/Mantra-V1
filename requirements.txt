@@ -1,5 +1,18 @@
-# M.A.N.T.R.A. Final Version - Minimal Dependencies
-streamlit
-pandas
-plotly
-numpy
+# M.A.N.T.R.A. Final Version - Production Dependencies
+# Minimal, locked dependencies for Streamlit Community Cloud
+
+# Core Framework
+streamlit>=1.32.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualization
+plotly>=5.17.0
+
+# HTTP Requests (for Google Sheets)
+requests>=2.31.0
+
+# Optional: Performance optimization (uncomment if needed)
+# pyarrow>=10.0.0
