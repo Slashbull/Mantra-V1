@@ -3,12 +3,6 @@ data_loader.py - M.A.N.T.R.A. Data Loading Engine (Final Version)
 ================================================================
 Handles all data loading, cleaning, validation, and preprocessing
 from Google Sheets. Optimized for Streamlit Cloud deployment.
-
-Features:
-- Robust error handling and fallbacks
-- Data validation and quality checks
-- Memory optimization
-- Comprehensive data cleaning for Indian market data
 """
 
 import pandas as pd
@@ -228,7 +222,6 @@ class DataLoader:
             'columns': len(df.columns)
         }
 
-# Main loading function
 def load_all_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, Dict[str, Any]]:
     """
     Load all data sheets and return processed dataframes
