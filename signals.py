@@ -1,13 +1,8 @@
 """
 signals.py - M.A.N.T.R.A. Signal Engine (Locked Production Version)
 ===================================================================
-All-time best logic: computes signal score, tags (STRONG_BUY, BUY, etc.),
-risk, and detailed reason for each stock based only on provided data and config.
-
-- 100% data-driven; no hardcoded logic
-- Robust to missing/extra columns  
-- Uses advanced factor scoring from constants.py
-- Generates actionable signals with explanations
+Advanced signal generation engine with multi-factor analysis.
+100% data-driven with comprehensive risk assessment.
 """
 
 import pandas as pd
@@ -296,7 +291,6 @@ class SignalEngine:
         
         return pd.concat(sector_leaders, ignore_index=True) if sector_leaders else pd.DataFrame()
 
-# Utility functions for UI integration
 def format_signal_badge(signal: str) -> str:
     """Format signal as colored HTML badge"""
     color = SIGNAL_COLORS.get(signal, "#6e7681")
