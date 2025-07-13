@@ -3,14 +3,6 @@ app.py - M.A.N.T.R.A. Main Streamlit Application (Final Version)
 ================================================================
 The complete, production-ready M.A.N.T.R.A. dashboard.
 100% data-driven, robust, beautiful, and optimized for Streamlit Cloud.
-
-Features:
-- Real-time Indian stock market analysis
-- Advanced multi-factor signal generation
-- Interactive visualizations and filtering
-- Professional dark theme UI
-- Mobile-responsive design
-- Export capabilities
 """
 
 import streamlit as st
