@@ -1,265 +1,127 @@
 """
-M.A.N.T.R.A. - Market Analysis Neural Trading Research Assistant
+app.py - M.A.N.T.R.A. Locked Streamlit Dashboard (Final Version)
 ================================================================
-FINAL PRODUCTION VERSION 1.0.0
-All signal, no noise. Every element is intentional.
+100% data-driven, robust, simple, and beautiful.
+Never needs an upgrade. All config/logic in constants.py and your Google Sheets.
 """
 
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-import time
+import plotly.express as px
 
-# Import our modules
-from config import *
-from data import DataHandler
+from constants import SHEET_URLS, SIGNAL_COLORS, RISK_COLORS, SCHEMA_DOC
+from data_loader import load_all_data
 from signals import SignalEngine
-from ui import UI
 
-# ============================================================================
-# PAGE CONFIGURATION (MUST BE FIRST)
-# ============================================================================
+st.set_page_config(page_title="M.A.N.T.R.A.", layout="wide")
 
-st.set_page_config(
-    page_title="M.A.N.T.R.A. - Stock Intelligence",
-    page_icon="🔱",
-    layout="wide",
-    initial_sidebar_state="collapsed"  # Start collapsed for cleaner look
-)
+# --- MODERN DARK UI THEME ---
+st.markdown("""
+    <style>
+        body, .stApp { background-color: #161b22 !important; color: #d1d5da; }
+        .reportview-container .main { color: #d1d5da; background: #161b22; }
+        .stDataFrame th, .stDataFrame td { color: #d1d5da !important; }
+        .css-18ni7ap { background: #0e1117 !important; }
+        .css-1v0mbdj {background: #21262d;}
+        footer {visibility: hidden;}
+    </style>
+""", unsafe_allow_html=True)
 
-# Initialize UI styling
-UI.load_css()
+# --- SIDEBAR ---
+st.sidebar.title("M.A.N.T.R.A.")
+st.sidebar.markdown("**Personal Indian Stock Intelligence Engine**")
+st.sidebar.caption("Locked. 100% data/config driven. No code changes ever needed.")
 
-# ============================================================================
-# SESSION STATE
-# ============================================================================
+with st.sidebar.expander("📄 Data Schema & Doc", expanded=False):
+    st.code(SCHEMA_DOC)
 
-if 'data_loaded' not in st.session_state:
-    st.session_state.data_loaded = False
-if 'last_refresh' not in st.session_state:
-    st.session_state.last_refresh = None
+# --- LOAD DATA ---
+with st.spinner("Loading latest data..."):
+    watchlist_df, returns_df, sector_df, status = load_all_data()
 
-# ============================================================================
-# HEADER
-# ============================================================================
+if not status.get("success", False):
+    st.error("🚫 Data load error(s): " + "; ".join(status.get("errors", [])))
+    st.stop()
 
-col1, col2, col3 = st.columns([3, 2, 1])
+# --- SIGNAL LOGIC ---
+with st.spinner("Calculating signals..."):
+    df_signals = SignalEngine.calculate_all_signals(watchlist_df, sector_df=sector_df, regime="balanced")
 
-with col1:
-    st.markdown("# 🔱 M.A.N.T.R.A.")
-    st.caption("Market Analysis Neural Trading Research Assistant")
+# --- FILTERS ---
+st.sidebar.markdown("### Filters")
+signal_options = ["All"] + sorted(df_signals["signal"].unique())
+chosen_signal = st.sidebar.selectbox("Signal", signal_options)
+sector_options = ["All"] + sorted(df_signals["sector"].dropna().unique())
+chosen_sector = st.sidebar.selectbox("Sector", sector_options)
+risk_options = ["All"] + sorted(df_signals["risk"].unique())
+chosen_risk = st.sidebar.selectbox("Risk", risk_options)
 
-with col2:
-    # Data quality indicator
-    if st.session_state.data_loaded and 'stocks_df' in st.session_state:
-        quality = DataHandler.assess_quality(st.session_state.stocks_df)
-        UI.quality_indicator(quality)
+filtered = df_signals.copy()
+if chosen_signal != "All":
+    filtered = filtered[filtered["signal"] == chosen_signal]
+if chosen_sector != "All":
+    filtered = filtered[filtered["sector"] == chosen_sector]
+if chosen_risk != "All":
+    filtered = filtered[filtered["risk"] == chosen_risk]
 
-with col3:
-    if st.button("🔄 Refresh", type="primary", use_container_width=True):
-        st.cache_data.clear()
-        st.session_state.data_loaded = False
-        st.rerun()
+# --- KPI CARDS ---
+kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+kpi1.metric("Universe", f"{len(df_signals)}")
+kpi2.metric("Buy Ideas", f"{(df_signals['signal'].isin(['BUY','STRONG_BUY']).sum())}")
+kpi3.metric("Strong Buys", f"{(df_signals['signal'] == 'STRONG_BUY').sum()}")
+kpi4.metric("Avoids", f"{(df_signals['signal'] == 'AVOID').sum()}")
 
-# ============================================================================
-# DATA LOADING
-# ============================================================================
+# --- TOP SIGNAL CARDS ---
+st.markdown("## 🚦 Top Opportunities")
+show_df = filtered.head(12)
+cols = st.columns(4)
+for idx, row in show_df.iterrows():
+    with cols[idx % 4]:
+        st.markdown(f"""
+        <div style="border-radius:12px;background:#21262d;padding:16px;margin-bottom:12px;box-shadow:0 0 4px #2ea043;">
+            <div style="font-size:18px;font-weight:bold;color:#58a6ff;">{row['ticker']}</div>
+            <div style="font-size:13px;">{row['company_name']}</div>
+            <div><b>Signal:</b> <span style="color:{SIGNAL_COLORS.get(row['signal'],'#fff')};">{row['signal']}</span></div>
+            <div><b>Score:</b> {int(row['score'])} | <b>Risk:</b> <span style="color:{RISK_COLORS.get(row['risk'],'#fff')};">{row['risk']}</span></div>
+            <div><b>Sector:</b> {row['sector']}</div>
+            <div style="font-size:11px;margin-top:7px;">{row['reason']}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-@st.cache_data(ttl=300, show_spinner=False)
-def load_all_data():
-    """Load and process all data with caching"""
-    return DataHandler.load_data()
-
-# Load data if needed
-if not st.session_state.data_loaded:
-    with st.spinner("Loading market data..."):
-        stocks_df, sector_df, status = load_all_data()
-        
-        if status['success']:
-            # Calculate signals
-            stocks_df = SignalEngine.calculate_signals(stocks_df, sector_df)
-            
-            # Store in session
-            st.session_state.stocks_df = stocks_df
-            st.session_state.sector_df = sector_df
-            st.session_state.data_loaded = True
-            st.session_state.last_refresh = datetime.now()
-        else:
-            st.error("Failed to load data. Please check your internet connection and try again.")
-            st.stop()
-
-# Get data
-df = st.session_state.stocks_df.copy()
-
-# ============================================================================
-# QUICK FILTERS (Minimal, Essential Only)
-# ============================================================================
-
-with st.expander("🎯 Filters", expanded=False):
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        signal_filter = st.multiselect(
-            "Signals",
-            options=['STRONG_BUY', 'BUY', 'WATCH'],
-            default=['STRONG_BUY', 'BUY']
-        )
-    
-    with col2:
-        min_score = st.slider("Min Score", 0, 100, 70, step=10)
-    
-    with col3:
-        risk_filter = st.multiselect(
-            "Risk",
-            options=['Low', 'Medium', 'High'],
-            default=['Low', 'Medium']
-        )
-    
-    with col4:
-        min_volume = st.number_input(
-            "Min Volume",
-            min_value=0,
-            value=100000,
-            step=50000,
-            format="%d"
-        )
-
-# Apply filters
-if signal_filter:
-    df = df[df['signal'].isin(signal_filter)]
-
-df = df[df['score'] >= min_score]
-
-if risk_filter:
-    df = df[df['risk'].isin(risk_filter)]
-
-if 'volume' in df.columns:
-    df = df[df['volume'] >= min_volume]
-
-# ============================================================================
-# MARKET OVERVIEW (Single Row of Key Metrics)
-# ============================================================================
-
-st.markdown("---")
-
-# Calculate market metrics
-total_stocks = len(df)
-buy_signals = len(df[df['signal'].isin(['BUY', 'STRONG_BUY'])])
-avg_score = df['score'].mean() if len(df) > 0 else 0
-market_breadth = (df['ret_1d'] > 0).sum() / len(df) * 100 if len(df) > 0 and 'ret_1d' in df.columns else 50
-
-# Display metrics
-col1, col2, col3, col4, col5, col6 = st.columns(6)
-
-with col1:
-    UI.metric_card("Stocks", f"{total_stocks:,}", icon="📊")
-
-with col2:
-    UI.metric_card("Buy Signals", buy_signals, 
-                   delta=f"{buy_signals/total_stocks*100:.0f}%" if total_stocks > 0 else "0%",
-                   delta_color="green")
-
-with col3:
-    UI.metric_card("Avg Score", f"{avg_score:.0f}", icon="📈")
-
-with col4:
-    UI.metric_card("Breadth", f"{market_breadth:.0f}%", 
-                   delta_color="green" if market_breadth > 50 else "red")
-
-with col5:
-    strong_momentum = len(df[df['momentum'] > 80]) if 'momentum' in df.columns else 0
-    UI.metric_card("Momentum", strong_momentum, icon="🚀")
-
-with col6:
-    high_volume = len(df[df['rvol'] > 2]) if 'rvol' in df.columns else 0
-    UI.metric_card("Volume Spikes", high_volume, icon="📊")
-
-# ============================================================================
-# TOP OPPORTUNITIES (The Core Value)
-# ============================================================================
-
-st.markdown("---")
-st.subheader("🎯 Top Opportunities")
-
-# Get top stocks
-top_stocks = df[df['signal'].isin(['STRONG_BUY', 'BUY'])].nlargest(12, 'score')
-
-if not top_stocks.empty:
-    # Display in a clean grid
-    cols = st.columns(3)
-    for idx, (_, stock) in enumerate(top_stocks.iterrows()):
-        with cols[idx % 3]:
-            UI.stock_card(stock)
-else:
-    st.info("No buy opportunities found. Try adjusting filters.")
-
-# ============================================================================
-# SIGNAL TABLE (Actionable Data Only)
-# ============================================================================
-
-st.markdown("---")
-st.subheader(f"📊 Signals ({len(df)} stocks)")
-
-# Prepare display dataframe
-display_cols = [
-    'ticker', 'name', 'signal', 'score', 'price', 
-    'ret_1d', 'ret_30d', 'pe', 'volume', 'rvol', 
-    'momentum', 'value', 'risk', 'sector'
-]
-
-# Only show columns that exist
-available_cols = [col for col in display_cols if col in df.columns]
-
-# Sort by score
-df_display = df.nlargest(min(100, len(df)), 'score')[available_cols]
-
-# Display with styling
+# --- FULL TABLE ---
+st.markdown("### 🔬 All Signals Table")
+table_cols = ["ticker", "company_name", "sector", "price", "signal", "score", "risk", "reason"]
+table_cols += [c for c in ["momentum", "value", "volume", "technical"] if c in filtered.columns]
 st.dataframe(
-    UI.style_dataframe(df_display),
-    height=600,
+    filtered[table_cols],
     use_container_width=True,
     hide_index=True
 )
 
-# ============================================================================
-# SECTOR PERFORMANCE (Simple Heatmap)
-# ============================================================================
-
-if not st.session_state.sector_df.empty:
-    st.markdown("---")
-    st.subheader("🏭 Sector Performance")
-    
-    fig = UI.sector_heatmap(st.session_state.sector_df)
-    st.plotly_chart(fig, use_container_width=True)
-
-# ============================================================================
-# DOWNLOAD
-# ============================================================================
-
-st.markdown("---")
-col1, col2, col3 = st.columns([1, 1, 1])
-
-with col2:
-    csv = df[available_cols].to_csv(index=False)
-    st.download_button(
-        label="📥 Download Signals (CSV)",
-        data=csv,
-        file_name=f"mantra_signals_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
-
-# ============================================================================
-# FOOTER
-# ============================================================================
-
-st.markdown("---")
-st.markdown(
-    """
-    <div style="text-align: center; color: #666; padding: 20px;">
-        <p>🔱 M.A.N.T.R.A. v1.0.0 Final | Data from Google Sheets</p>
-        <p style="font-size: 12px;">All signals for educational purposes only. Always do your own research.</p>
-    </div>
-    """,
-    unsafe_allow_html=True
+# --- EXPORT BUTTON ---
+st.download_button(
+    label="⬇️ Export as CSV",
+    data=filtered.to_csv(index=False),
+    file_name="mantra_signals_export.csv",
+    mime="text/csv"
 )
+
+# --- SECTOR HEATMAP ---
+if not sector_df.empty and "sector_ret_30d" in sector_df.columns:
+    st.markdown("### 🟩 Sector Momentum (30D Return)")
+    chart = px.bar(
+        sector_df.sort_values("sector_ret_30d", ascending=False),
+        x="sector", y="sector_ret_30d", color="sector_ret_30d",
+        color_continuous_scale="RdYlGn",
+        labels={"sector_ret_30d": "30D Return (%)"}, height=350
+    )
+    st.plotly_chart(chart, use_container_width=True)
+
+# --- FOOTER ---
+st.markdown("""
+    <hr style='border-color:#21262d;'>
+    <div style='color:#666;font-size:12px;text-align:center;'>
+        <b>M.A.N.T.R.A.</b> &copy; {year} — Locked Version. No Upgrades. | Precision Over Noise.<br>
+        <span style='font-size:11px;'>All logic and scoring are 100% data/config driven. For personal use only.</span>
+    </div>
+""".format(year=pd.Timestamp.today().year), unsafe_allow_html=True)
